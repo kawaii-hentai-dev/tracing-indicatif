@@ -11,6 +11,8 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Sync + Send>>;
 
+const WORKER_NUM: Option<&str> = option_env!("WORKER_NUM");
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let indicatif_layer = IndicatifLayer::new()
@@ -34,7 +36,7 @@ async fn main() -> Result<()> {
 
     let (tx, rx) = std::sync::mpmc::channel();
 
-    for _ in 0..5 {
+    for _ in 0..WORKER_NUM.unwrap_or("4").parse()? {
         let rx = rx.clone();
         tokio::spawn(async move {
             while let Ok(_) = rx.recv() {
