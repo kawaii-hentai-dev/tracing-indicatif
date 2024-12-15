@@ -8,6 +8,7 @@ use indicatif::MultiProgress;
 use indicatif::ProgressBar;
 use indicatif::ProgressDrawTarget;
 use indicatif::ProgressState;
+use tracing::debug;
 use tracing_core::span;
 use tracing_core::Subscriber;
 use tracing_subscriber::layer;
@@ -257,17 +258,21 @@ impl ProgressBarManager {
     {
         let Some(pb) = pb_span_ctx.progress_bar.take() else {
             // Span was never entered.
+            debug!("Span was never entered.");
             return;
         };
 
         // The span closed before we had a chance to show its progress bar.
         if pb.is_hidden() {
             self.decrement_pending_pb();
+            debug!("ProgressBar is hidden.");
             return;
         }
 
         // This span had an active/shown progress bar.
+        debug!("finishing progress bar!");
         pb.finish_and_clear();
+        debug!("finishing progress bar done!");
         self.mp.remove(&pb);
         self.active_progress_bars -= 1;
 
@@ -292,12 +297,14 @@ impl ProgressBarManager {
                         continue;
                     }
 
+                    debug!("decrement_pending_pb here");
                     self.decrement_pending_pb();
                     self.show_progress_bar(indicatif_span_ctx, &span_id);
                     break;
                 }
                 None => {
                     // Span was closed earlier, we "garbage collect" it from the queue here.
+                    debug!("Span was closed earlier!");
                     continue;
                 }
             }

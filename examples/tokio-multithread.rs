@@ -4,20 +4,33 @@ use std::{error::Error, time::Duration};
 
 use indicatif::ProgressStyle;
 use rand::random;
-use tracing::info_span;
+use tracing::{info_span, Level};
+use tracing_core::LevelFilter;
 use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Sync + Send>>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let indicatif_layer = IndicatifLayer::new().with_progress_style(
-        ProgressStyle::default_bar()
-            .template("{spinner:.green} {msg} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")?
-            .progress_chars("#>-"),
-    );
-    tracing_subscriber::registry().with(indicatif_layer).init();
+    let indicatif_layer = IndicatifLayer::new()
+        .with_progress_style(
+            ProgressStyle::default_bar()
+                .template(
+                    "{spinner:.green} {msg} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})",
+                )?
+                .progress_chars("#>-"),
+        )
+        .with_max_progress_bars(u64::MAX, None);
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_level(true)
+                .with_writer(indicatif_layer.get_stderr_writer())
+                .with_filter(LevelFilter::from_level(Level::DEBUG)),
+        )
+        .with(indicatif_layer)
+        .init();
 
     let (tx, rx) = std::sync::mpmc::channel();
 

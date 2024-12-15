@@ -46,6 +46,7 @@ use indicatif::style::ProgressStyle;
 use indicatif::style::ProgressTracker;
 use indicatif::MultiProgress;
 use indicatif::ProgressBar;
+use tracing::debug;
 use tracing_core::span;
 use tracing_core::Subscriber;
 use tracing_subscriber::fmt::format::DefaultFields;
@@ -678,7 +679,9 @@ where
     }
 
     fn on_close(&self, id: span::Id, ctx: layer::Context<'_, S>) {
+        debug!("on_close triggered!");
         let mut pb_manager_lock = self.pb_manager.lock().unwrap();
+        debug!("pb_manager acquired!");
 
         let span = ctx
             .span(&id)
@@ -687,7 +690,10 @@ where
 
         // Clear the progress bar only when the span has closed completely.
         if let Some(indicatif_ctx) = ext.get_mut::<IndicatifSpanContext>() {
+            debug!("succeed to get_mut indicatif_ctx!");
             pb_manager_lock.finish_progress_bar(indicatif_ctx, &ctx);
+        } else {
+            debug!("failed to get_mut indicatif_ctx!");
         }
     }
 
