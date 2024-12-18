@@ -4,7 +4,7 @@ use std::{error::Error, time::Duration};
 
 use indicatif::ProgressStyle;
 use rand::random;
-use tracing::{info_span, Level};
+use tracing::{instrument, Level, Span};
 use tracing_core::LevelFilter;
 use tracing_indicatif::{span_ext::IndicatifSpanExt, IndicatifLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
             tracing_subscriber::fmt::layer()
                 .with_level(true)
                 .with_writer(indicatif_layer.get_stderr_writer())
-                .with_filter(LevelFilter::from_level(Level::DEBUG)),
+                .with_filter(LevelFilter::from_level(Level::INFO)),
         )
         .with(indicatif_layer)
         .init();
@@ -51,22 +51,19 @@ async fn main() -> Result<()> {
     }
 }
 
+#[instrument]
 async fn payload() {
     let target: u32 = random::<u16>() as u32 * 1000;
 
-    let span = info_span!("download");
-    span.pb_set_length(target as _);
-    let _enter = span.enter();
+    Span::current().pb_set_length(target as _);
 
     let mut cur: u32 = 0;
     let speed = 1024 * 1024;
     loop {
         cur += speed;
 
-        span.pb_set_position(cur.min(target) as _);
+        Span::current().pb_set_position(cur.min(target) as _);
         if cur >= target {
-            drop(_enter);
-            drop(span);
             break;
         }
 
